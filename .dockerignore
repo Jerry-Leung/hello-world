@@ -1,0 +1,21 @@
+# Build output — will be rebuilt inside the image
+build/
+.gradle/
+
+# Version control
+.git/
+.gitignore
+
+# IDE files
+.idea/
+.settings/
+.classpath
+.project
+*.iml
+
+# OS files
+.DS_Store
+
+# Docs / misc
+README.md
+*.md
