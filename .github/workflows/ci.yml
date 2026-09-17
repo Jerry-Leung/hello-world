@@ -93,27 +93,59 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    name: Deploy to Render
+  deploy-dev:
+    name: Deploy to Dev
     runs-on: ubuntu-latest
     needs: build-push-image
-    # Only deploy on pushes to master (after the image is published).
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    # 'dev' environment: no protection rules -> deploys automatically.
+    environment:
+      name: dev
+      url: https://hello-world-latest-0rkk.onrender.com
     steps:
-      - name: Trigger Render deploy
+      - name: Trigger Render deploy (dev)
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK" ]; then
-            echo "::error::RENDER_DEPLOY_HOOK secret is not set. Add it in repo Settings → Secrets and variables → Actions."
+            echo "::error::RENDER_DEPLOY_HOOK secret is not set for the 'dev' environment."
             exit 1
           fi
-          echo "Calling Render deploy hook..."
+          echo "Triggering Render DEV deploy..."
           http_code=$(curl -s -o response.txt -w "%{http_code}" "$RENDER_DEPLOY_HOOK")
           echo "Render responded with HTTP $http_code"
           cat response.txt || true
           if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
-            echo "::error::Render deploy hook failed (HTTP $http_code)"
+            echo "::error::Render dev deploy hook failed (HTTP $http_code)"
             exit 1
           fi
-          echo "Render deploy triggered successfully. Render will now pull the new image and roll it out."
+          echo "Dev deploy triggered successfully."
+
+  deploy-stg:
+    name: Deploy to Stg
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    # 'stg' environment: add a required reviewer in GitHub settings to enforce
+    # the manual approval gate before this job runs.
+    environment:
+      name: stg
+      url: https://hello-world-stg.onrender.com
+    steps:
+      - name: Trigger Render deploy (stg)
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK secret is not set for the 'stg' environment."
+            exit 1
+          fi
+          echo "Triggering Render STG deploy..."
+          http_code=$(curl -s -o response.txt -w "%{http_code}" "$RENDER_DEPLOY_HOOK")
+          echo "Render responded with HTTP $http_code"
+          cat response.txt || true
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "::error::Render stg deploy hook failed (HTTP $http_code)"
+            exit 1
+          fi
+          echo "Stg deploy triggered successfully."
