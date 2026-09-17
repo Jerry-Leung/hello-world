@@ -56,6 +56,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      image: ${{ steps.sha-tag.outputs.image }}
+      sha_tag: ${{ steps.sha-tag.outputs.sha_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -93,6 +96,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Output the exact SHA image reference so deploy jobs can pin it.
+      - name: Output image SHA tag
+        id: sha-tag
+        run: |
+          SHA_TAG="sha-$(echo ${{ github.sha }} | cut -c1-7)"
+          IMAGE="${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${SHA_TAG}"
+          echo "sha_tag=${SHA_TAG}" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "Pinned image: $IMAGE"
+
   deploy-dev:
     name: Deploy to Dev
     runs-on: ubuntu-latest
@@ -106,28 +119,29 @@ jobs:
       - name: Trigger Render deploy (dev)
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          IMAGE: ${{ needs.build-push-image.outputs.image }}
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK" ]; then
             echo "::error::RENDER_DEPLOY_HOOK secret is not set for the 'dev' environment."
             exit 1
           fi
-          echo "Triggering Render DEV deploy..."
-          http_code=$(curl -s -o response.txt -w "%{http_code}" "$RENDER_DEPLOY_HOOK")
+          echo "Deploying pinned image: $IMAGE"
+          HOOK_URL="${RENDER_DEPLOY_HOOK}&imgURL=$(python3 -c "import urllib.parse,os; print(urllib.parse.quote(os.environ['IMAGE']))")"
+          http_code=$(curl -s -o response.txt -w "%{http_code}" "$HOOK_URL")
           echo "Render responded with HTTP $http_code"
           cat response.txt || true
           if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
             echo "::error::Render dev deploy hook failed (HTTP $http_code)"
             exit 1
           fi
-          echo "Dev deploy triggered successfully."
+          echo "Dev deploy triggered successfully (image: $IMAGE)"
 
   deploy-stg:
     name: Deploy to Stg
     runs-on: ubuntu-latest
-    needs: deploy-dev
+    needs: [deploy-dev, build-push-image]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    # 'stg' environment: add a required reviewer in GitHub settings to enforce
-    # the manual approval gate before this job runs.
+    # 'stg' environment: required reviewer = manual approval gate.
     environment:
       name: stg
       url: https://hello-world-stg.onrender.com
@@ -135,17 +149,19 @@ jobs:
       - name: Trigger Render deploy (stg)
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          IMAGE: ${{ needs.build-push-image.outputs.image }}
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK" ]; then
             echo "::error::RENDER_DEPLOY_HOOK secret is not set for the 'stg' environment."
             exit 1
           fi
-          echo "Triggering Render STG deploy..."
-          http_code=$(curl -s -o response.txt -w "%{http_code}" "$RENDER_DEPLOY_HOOK")
+          echo "Deploying pinned image: $IMAGE"
+          HOOK_URL="${RENDER_DEPLOY_HOOK}&imgURL=$(python3 -c "import urllib.parse,os; print(urllib.parse.quote(os.environ['IMAGE']))")"
+          http_code=$(curl -s -o response.txt -w "%{http_code}" "$HOOK_URL")
           echo "Render responded with HTTP $http_code"
           cat response.txt || true
           if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
             echo "::error::Render stg deploy hook failed (HTTP $http_code)"
             exit 1
           fi
-          echo "Stg deploy triggered successfully."
+          echo "Stg deploy triggered successfully (image: $IMAGE)"
