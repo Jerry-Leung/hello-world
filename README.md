@@ -5,12 +5,12 @@ A simple Spring Boot application exposing a `Hello World` endpoint.
 ## Requirements
 
 - Java 21+ (Java 22 works too)
-- No local Maven needed — the Maven Wrapper (`./mvnw`) is included
+- No local Gradle needed — the Gradle Wrapper (`./gradlew`) is included
 
 ## Run
 
 ```bash
-./mvnw spring-boot:run
+./gradlew bootRun
 ```
 
 Then open http://localhost:8080/ — it returns `Hello World`.
@@ -18,14 +18,14 @@ Then open http://localhost:8080/ — it returns `Hello World`.
 ## Build
 
 ```bash
-./mvnw clean package
-java -jar target/hello-world-0.0.1-SNAPSHOT.jar
+./gradlew clean build
+java -jar build/libs/hello-world-0.0.1-SNAPSHOT.jar
 ```
 
 ## Test
 
 ```bash
-./mvnw test
+./gradlew test
 ```
 
 ## Endpoint
