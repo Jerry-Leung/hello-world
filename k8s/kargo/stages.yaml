@@ -1,0 +1,80 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: hello-world
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: hello-world
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: https://github.com/Jerry-Leung/hello-world.git
+            checkout:
+              - branch: master
+                path: ./repo
+        - uses: yaml-update
+          config:
+            path: ./repo/k8s/dev/deployment.yaml
+            updates:
+              - key: spec.template.spec.containers.0.image
+                value: ${{ imageFrom("ghcr.io/jerry-leung/hello-world").RepoURL }}:${{ imageFrom("ghcr.io/jerry-leung/hello-world").Tag }}
+        - uses: git-commit
+          config:
+            path: ./repo
+            message: "kargo: promote ${{ imageFrom(\"ghcr.io/jerry-leung/hello-world\").Tag }} to dev"
+        - uses: git-push
+          config:
+            path: ./repo
+        - uses: argocd-update
+          config:
+            apps:
+              - name: hello-world
+                namespace: argocd
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: stg
+  namespace: hello-world
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: hello-world
+      sources:
+        stages:
+          - dev
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: https://github.com/Jerry-Leung/hello-world.git
+            checkout:
+              - branch: master
+                path: ./repo
+        - uses: yaml-update
+          config:
+            path: ./repo/k8s/stg/deployment.yaml
+            updates:
+              - key: spec.template.spec.containers.0.image
+                value: ${{ imageFrom("ghcr.io/jerry-leung/hello-world").RepoURL }}:${{ imageFrom("ghcr.io/jerry-leung/hello-world").Tag }}
+        - uses: git-commit
+          config:
+            path: ./repo
+            message: "kargo: promote ${{ imageFrom(\"ghcr.io/jerry-leung/hello-world\").Tag }} to stg"
+        - uses: git-push
+          config:
+            path: ./repo
+        - uses: argocd-update
+          config:
+            apps:
+              - name: hello-world-stg
+                namespace: argocd
