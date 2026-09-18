@@ -83,6 +83,9 @@ jobs:
             type=raw,value=latest
             type=sha,format=short
 
+      - name: Set up QEMU (for multi-platform builds)
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -91,6 +94,9 @@ jobs:
         with:
           context: .
           push: true
+          # Build for both amd64 (GitHub Actions runners, cloud) and
+          # arm64 (Apple Silicon Macs, minikube on ARM, AWS Graviton).
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
