@@ -15,6 +15,10 @@ spec:
       labels:
         app: hello-world
     spec:
+      # Use the imagePullSecret to authenticate with ghcr.io (private registry).
+      # The secret 'ghcr-pull-secret' must exist in the same namespace.
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: hello-world
           image: ghcr.io/jerry-leung/hello-world:latest
