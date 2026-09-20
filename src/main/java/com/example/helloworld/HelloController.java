@@ -10,9 +10,17 @@ public class HelloController {
     @Value("${HELLO_MESSAGE:Hello World 5}")
     private String message;
 
+    @Value("${DB_PASSWORD:no-password-set}")
+    private String dbPassword;
+
     @GetMapping("/")
     public String hello() {
         return message;
+    }
+
+    @GetMapping("/secret-demo")
+    public String secretDemo() {
+        return "DB password length: " + dbPassword.length();
     }
 
 }
