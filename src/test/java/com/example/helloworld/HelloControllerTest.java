@@ -1,11 +1,11 @@
 package com.example.helloworld;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,8 +30,8 @@ class HelloControllerTest {
     void setUp() {
         wireMockServer = new WireMockServer(9090);
         wireMockServer.start();
-        wireMockServer.stubFor(get(urlEqualTo("/greeting"))
-            .willReturn(aResponse()
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo("/greeting"))
+            .willReturn(WireMock.aResponse()
                 .withStatus(200)
                 .withBody("Hi from Greeting Service!")));
     }
