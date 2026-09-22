@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -23,6 +24,11 @@ class HelloControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    // GreetingEventProducer requires KafkaTemplate which is not available in the
+    // WebMvcTest slice — mock it so Spring can wire HelloController without a broker
+    @MockBean
+    private GreetingEventProducer greetingEventProducer;
 
     private WireMockServer wireMockServer;
 
